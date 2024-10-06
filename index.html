@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ishan's Hacks</title>
+
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+            border-radius: 5px;
+            border: none;
+        }
+
+        input {
+            padding: 5px;
+            text-align: center;
+        }
+
+        input.bad {
+            border: 3px solid red;
+            background: #FFDDDD;
+        }
+
+        body {
+            display: grid;
+            gap: 30px 10px;
+            width: max-content;
+            align-items: center;
+            justify-items: center;
+            margin: auto;
+            margin-top: 30px;
+        }
+
+        .block {
+            display: grid;
+            background: #DDDDDD;
+            width: 300px;
+            padding: 10px;
+        }
+
+        .block.good {
+            background: #22ff00;
+        }
+
+        .choice {
+            display: grid;
+            grid-auto-flow: column;
+            gap: 20px;
+        }
+
+        .seq {
+            display: grid;
+            grid-template-areas:
+                "a a a a"
+                "b c d e";
+            width: 300px;
+            border: 2px solid black;
+        }
+
+        .seq input {
+            grid-area: a;
+            background: #DDDDDD;
+        }
+
+        .symbol {
+            width: 50px;
+            height: 50px;
+        }
+
+        .symbol::before {
+            font-size: 50px;
+            line-height: 50px;
+            font-weight: 900;
+            text-align: center;
+            width: 50px;
+            height: 50px;
+        }
+
+        .b::before {
+            content: "+";
+            color: blue;
+            margin-left: 10px;
+        }
+
+        .y::before {
+            content: "▲";
+            color: yellow;
+        }
+
+        .r::before {
+            content: "■";
+            color: red;
+            font-size: 100px;
+            margin-left: -3px;
+        }
+
+        .g::before {
+            content: "●";
+            color: green;
+            font-size: 80px;
+            margin-left: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="seq">
+        <input autocomplete="off" type="text" class="seqin" id="in" placeholder="colors separated by space (eg. r y b g)">
+        <div class="symbol"></div>
+        <div class="symbol"></div>
+        <div class="symbol"></div>
+        <div class="symbol"></div>
+    </div>
+
+    <div class="layer">
+        <div class="block">
+            <input indx=0 autocomplete="off" type="text" placeholder="numbers separated by space (eg. 1 3 2 4)" value = "1 2 3 4">
+        </div>
+    </div>
+
+    <div class="choice">
+        <div class="block">
+            <input indx=1 indx2=0 autocomplete="off" type="text" placeholder="numbers separated by space (eg. 1 3 2 4)">
+        </div>
+        <div class="block">
+            <input indx=1 indx2=1 autocomplete="off" type="text" placeholder="numbers separated by space (eg. 1 3 2 4)">
+        </div>
+        <div class="block">
+            <input indx=1 indx2=2 autocomplete="off" type="text" placeholder="numbers separated by space (eg. 1 3 2 4)">
+        </div>
+    </div>
+
+    <div class="layer">
+        <div class="block">
+            <input idx=2 autocomplete="off" type="text" placeholder="numbers separated by space (eg. 1 3 2 4)" value = "1 2 3 4">
+        </div>
+    </div>
+
+    <div class="seq">
+        <input autocomplete="off" type="text" class="seqin" id="out" placeholder="colors with no separator (eg. r y b g)">
+        <div class="symbol"></div>
+        <div class="symbol"></div>
+        <div class="symbol"></div>
+        <div class="symbol"></div>
+    </div>
+
+    <script>
+        let machine = [
+            [0, 1, 2, 3],
+            [[0, 1, 2, 3], [0, 1, 2, 3], [0, 1, 2, 3]],
+            [0, 1, 2, 3]
+        ]
+
+        inp = []
+        outp = []
+
+        const choice_elts = []
+
+        for (const input of document.getElementsByClassName("seqin")) {
+            input.addEventListener("keyup", () => {
+                const thing = input.value.split(" ")
+
+                if (thing.length > 4) return input.classList.add("bad")
+
+                input.classList.remove("bad")
+
+                const sus = input.parentElement
+
+                for (let i = 0; i < thing.length; i++) {
+                    if (!["r", "y", "g", "b"].includes(thing[i])) {
+                        return input.classList.add("bad")
+                    }
+
+                    sus.children[i+1].className = "symbol " + thing[i]
+                }
+
+                if (thing.length == 4) {
+                    if (input.id == "in") {
+                        inp = thing
+                    } else {
+                        outp = thing
+                    }
+                }
+
+                recompute()
+            })
+        }
+
+        for (const block of document.getElementsByClassName("block")) {
+            const seq = block.children[0]
+
+            choice_elts.push(block)
+
+            seq.addEventListener("keyup", ()  => {
+                const thing = seq.value.split(" ")
+
+                let sus = [1, 2, 3, 4]
+
+                for (let i = 0; i < 4; i++) {
+                    sus[i] = parseInt(thing[i]) - 1
+                }
+
+                if (thing.length != 4) return seq.classList.add("bad")
+
+                seq.classList.remove("bad")
+
+                let i = parseInt(seq.getAttribute("indx"))
+                let j = 0
+                if (i == 1) {
+                    j = parseInt(seq.getAttribute("indx2"))
+                    machine[i][j] = sus
+                } else {
+                    machine[i] = sus
+                }
+                recompute()
+            })
+        }
+
+        function reassign(s, r) {
+            let out = [1, 2, 3, 4]
+
+            for (let i = 0; i < 4; i++) {
+                out[i] = s[r[i]]
+            }
+
+            return out
+        }
+
+        function forward(machine, choice_i) {
+            let curr = inp
+
+            curr = reassign(curr, machine[0])
+            curr = reassign(curr, machine[1][choice_i])
+            curr = reassign(curr, machine[2])
+            
+            return curr
+        }
+        
+        function solve(machine) {
+            for (let ci = 0; ci < machine[1].length; ci++) {
+                const asdf = forward(machine, ci)
+
+                if (asdf.toString() == outp.toString()) {
+                    return ci
+                }
+            }
+
+            return -1
+        }
+
+        function recompute() {
+            const res = solve(machine)
+
+            for (let i = 0; i < 3; i++) {
+                choice_elts[i].class = "block"
+            }
+
+            if (res == -1) return
+
+            choice_elts[res+1].className = "good block"
+        }
+    </script>
+</body>
+</html>
